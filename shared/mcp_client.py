@@ -45,6 +45,14 @@ import os
 import sys
 from typing import Any, Optional
 
+# Ensure subprocess support on Windows event loop (needed for anyio/open_process)
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    except Exception:
+        # If policy cannot be set for any reason, continue and let errors surface
+        pass
+
 # ---------------------------------------------------------------------------
 # MCP SDK import — graceful fallback if not installed
 # ---------------------------------------------------------------------------
