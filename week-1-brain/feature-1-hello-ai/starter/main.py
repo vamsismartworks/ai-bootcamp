@@ -36,8 +36,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="My AI Assistant",
-    description="Domain-Specific AI Assistant — AI Engineering Bootcamp, BlockseBlock",
+    title="HealthCare Domain Assistant",
+    description="HealthCare AI Assistant — AI Engineering Bootcamp, BlockseBlock",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -49,7 +49,7 @@ class ChatRequest(BaseModel):
     # TODO (Feature 1, Step 1): Add a field called `message` of type str.
     # This is what the user sends to the assistant.
     # Hint: the syntax is:  field_name: field_type
-    pass
+    message: str
 
 
 class ChatResponse(BaseModel):
@@ -79,7 +79,23 @@ async def chat(request: ChatRequest) -> ChatResponse:
     # 3. Return: ChatResponse(response=result.content or "")
     #
     # See GLOSSARY.md for explanations of "system prompt", "LLM", and "token".
-    pass
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful AI assistant for HealthCare. "
+                "Answer clearly and concisely. "
+                "If you don't know something, say so honestly rather than guessing."
+            ),
+        },
+        {
+            "role": "user", 
+            "content": request.message
+        },
+    ]
+
+    result = await call_llm(messages)
+    return ChatResponse(response=result.content or "")
 
 
 @app.get("/api/health")
