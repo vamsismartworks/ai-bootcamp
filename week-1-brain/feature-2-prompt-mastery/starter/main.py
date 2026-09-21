@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="My AI BlockSeBlock Assistant",
-    description="Domain-Specific AI Assistant — AI Engineering Bootcamp, BlockseBlock",
+    title="My Healthcare AI Assistant",
+    description="Healthcare AI Assistant — AI Engineering Bootcamp, BlockseBlock",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -68,7 +68,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         {
             "role": "system",
             "content": (
-                "You are a helpful AI assistant for [YOUR_DOMAIN]. "
+                "You are a helpful AI assistant for Healthcare Domain. "
                 "Answer clearly and concisely. "
                 "If you don't know something, say so honestly rather than guessing."
             ),
@@ -104,11 +104,31 @@ async def chat(request: ChatRequest) -> ChatResponse:
 #   - Shorter, more direct prompts usually outperform long rambling ones.
 #
 # See resource/prompt-engineering-workbook.md for worked examples and exercises.
-_STRUCTURED_SYSTEM_PROMPT = """
-# TODO (Feature 2, Step 1): Replace this string with your structured system prompt.
-# The prompt should instruct the model to return JSON matching StructuredResponse.
-# See the comments above for the required fields and tips.
-"""
+_STRUCTURED_SYSTEM_PROMPT = """You are a helpful AI assistant for Healthcare Domain.
+
+For every user message, respond ONLY with a JSON object (no markdown, no extra text)
+with exactly these four fields:
+
+{
+  "intent": "<one of: general_question | domain_question | action_request | unclear>",
+  "answer": "<your response to the user, written in plain English>",
+  "confidence": <a number between 0.0 and 1.0 representing how sure you are>,
+  "sources_needed": <true if domain documents would improve this answer, false otherwise>
+}
+
+Intent definitions:
+- "general_question": factual/knowledge query not specific to Healthcare Domain
+- "domain_question": a question specifically about Healthcare Domain and its offerings
+- "action_request": the user wants something DONE (book, schedule, find, order, send…)
+- "unclear": ambiguous, nonsensical, or doesn't fit the other categories
+
+Confidence guidelines:
+- 0.9–1.0: you are certain (common knowledge, clear domain fact)
+- 0.6–0.8: you are reasonably sure but the user should verify
+- 0.3–0.5: you are uncertain; the answer may be incomplete or partly guessed
+- 0.0–0.2: you don't know and are mostly guessing
+
+Respond ONLY with the JSON object. No preamble, no explanation, no markdown fences."""
 
 
 @app.post("/api/chat/structured", response_model=StructuredResponse)
@@ -131,6 +151,18 @@ async def chat_structured(request: ChatRequest) -> StructuredResponse:
     )
 
     raw_text = result.content or ""
+    try:
+        data = json.loads(raw_text)
+        return StructuredResponse(**data)
+    except (json.JSONDecodeError, Exception):
+        # The model produced something we can't parse. Return a degraded-but-safe
+        # fallback rather than crashing the server.
+        return StructuredResponse(
+            intent="unclear",
+            answer=raw_text or "The assistant returned an unexpected response.",
+            confidence=0.0,
+            sources_needed=False,
+        )
 
     # TODO (Feature 2, Step 2): Parse raw_text into a StructuredResponse.
     #
