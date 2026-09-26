@@ -112,7 +112,11 @@ You are a restaurant recommendation assistant. Suggest a restaurant to the user.
 > *Hint: tell the model exactly what format to use (e.g., "respond in this JSON format:", or "use exactly three sentences", or "use a bulleted list with these fields").*
 
 ```
-[Write your improved prompt here]
+You are a very good food critic who can recommend a good restuarant. Suggest a good restuarat which serves fresh sea food.
+
+Answer the question with a good restuarant name along with relevance in 2 to 3 sentences.
+
+
 ```
 
 ---

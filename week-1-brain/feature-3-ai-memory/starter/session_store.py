@@ -43,7 +43,12 @@ def create_session() -> str:
     """
     # TODO (Feature 3, Step 2): Implement create_session().
     # After implementing, POST /api/sessions should return a real UUID.
-    raise NotImplementedError("Implement create_session() — see the docstring above.")
+    #raise NotImplementedError("Implement create_session() — see the docstring above.")
+
+    session_id = str(uuid.uuid4())
+    session = Session(id=session_id, created_at=datetime.now(tz=timezone.utc), messages=[])
+    _store[session_id] = session
+    return session_id
 
 
 def get_session(session_id: str) -> Optional[Session]:
@@ -57,7 +62,11 @@ def get_session(session_id: str) -> Optional[Session]:
     """
     # TODO (Feature 3, Step 3): Implement get_session().
     # Hint: one line — return _store.get(session_id)
-    raise NotImplementedError("Implement get_session() — see the docstring above.")
+    #raise NotImplementedError("Implement get_session() — see the docstring above.")
+    session = _store.get(session_id)
+    if session is None:
+        return None
+    return session
 
 
 def add_message(session_id: str, role: str, content: str) -> None:
@@ -74,7 +83,13 @@ def add_message(session_id: str, role: str, content: str) -> None:
     # TODO (Feature 3, Step 4): Implement add_message().
     # After implementing, conversation history will be saved and the AI will
     # remember earlier messages within the session.
-    raise NotImplementedError("Implement add_message() — see the docstring above.")
+    #raise NotImplementedError("Implement add_message() — see the docstring above.")
+    session = _store.get(session_id)
+    if session is None:
+        return
+
+    message = Message(role=role, content=content, timestamp=datetime.now(tz=timezone.utc))
+    session.messages.append(message)
 
 
 def list_sessions() -> list[Session]:
@@ -86,4 +101,5 @@ def list_sessions() -> list[Session]:
     """
     # TODO (Feature 3, Step 5): Implement list_sessions().
     # After implementing, the sidebar will populate with your session history.
-    raise NotImplementedError("Implement list_sessions() — see the docstring above.")
+    #raise NotImplementedError("Implement list_sessions() — see the docstring above.")
+    return sorted(_store.values(), key=lambda s: s.created_at, reverse=True)

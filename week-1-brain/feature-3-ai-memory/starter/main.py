@@ -43,8 +43,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="My AI BlockSeBlock Assistant",
-    description="Domain-Specific AI Assistant — AI Engineering Bootcamp, BlockseBlock",
+    title="My Travel Assistant",
+    description="Travel AI Assistant — AI Engineering Bootcamp, BlockseBlock",
     version="3.0.0",
     lifespan=lifespan,
 )
@@ -82,7 +82,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         {
             "role": "system",
             "content": (
-                "You are a helpful AI assistant for [YOUR_DOMAIN]. "
+                "You are a helpful AI assistant for Travel. "
                 "Answer clearly and concisely. "
                 "If you don't know something, say so honestly rather than guessing."
             ),
@@ -97,7 +97,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 # Feature 2: Structured chat  (complete — do not modify)
 # ---------------------------------------------------------------------------
 
-_STRUCTURED_SYSTEM_PROMPT = """You are a helpful AI assistant for [YOUR_DOMAIN].
+_STRUCTURED_SYSTEM_PROMPT = """You are a helpful AI assistant for Travel.
 
 For every user message, respond ONLY with a JSON object (no markdown, no extra text)
 with exactly these four fields:
@@ -110,8 +110,8 @@ with exactly these four fields:
 }
 
 Intent definitions:
-- "general_question": factual/knowledge query not specific to [YOUR_DOMAIN]
-- "domain_question": a question specifically about [YOUR_DOMAIN] and its offerings
+- "general_question": factual/knowledge query not specific to [Travel Assistant Domain]
+- "domain_question": a question specifically about [Travel Assistant Domain] and its offerings
 - "action_request": the user wants something DONE (book, schedule, find, order, send…)
 - "unclear": ambiguous, nonsensical, or doesn't fit the other categories
 
@@ -144,7 +144,7 @@ async def chat_structured(request: ChatRequest) -> StructuredResponse:
         {"role": "system", "content": _STRUCTURED_SYSTEM_PROMPT},
         {"role": "user", "content": request.message},
     ]
-    result = await call_llm(messages, temperature=0.3, response_format={"type": "json_object"})
+    result = await call_llm(messages, temperature=0.2, response_format={"type": "json_object"})
     return _parse_structured(result.content or "")
 
 
@@ -166,7 +166,9 @@ async def new_session() -> dict:
     # TODO (Feature 3, Step 6a): Implement new_session().
     # One line: session_id = create_session()
     # One line: return {"session_id": session_id}
-    raise NotImplementedError("Implement new_session()")
+    #raise NotImplementedError("Implement new_session()")
+    session_id = create_session()
+    return {"session_id": session_id}
 
 
 @app.get("/api/sessions", response_model=list[SessionSummary])
@@ -184,7 +186,23 @@ async def sessions_list() -> list[SessionSummary]:
       next((m.content for m in s.messages if m.role == "user"), "")
     """
     # TODO (Feature 3, Step 6b): Implement sessions_list().
-    raise NotImplementedError("Implement sessions_list()")
+    #raise NotImplementedError("Implement sessions_list()")
+    summaries = []
+    for s in list_sessions():
+           first_user_msg = next(
+               (m.content for m in s.messages if m.role == "user"), ""
+           )
+           title = (first_user_msg[:60] + "…") if len(first_user_msg) > 60 else (first_user_msg or "New conversation")
+           summaries.append(
+               SessionSummary(
+                   id=s.id,
+                   created_at=s.created_at.isoformat(),
+                   message_count=len(s.messages),
+                   title=title,
+               )
+           )
+    return summaries
+   
 
 
 @app.post("/api/sessions/{session_id}/chat", response_model=StructuredResponse)
@@ -235,7 +253,30 @@ async def session_chat(session_id: str, request: ChatRequest) -> StructuredRespo
       10. Return structured.
     """
     # TODO (Feature 3, Step 6c): Implement session_chat() following the steps above.
-    raise NotImplementedError("Implement session_chat()")
+    #raise NotImplementedError("Implement session_chat()")
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found. Create one with POST /api/sessions.")
+    
+    messages = [{"role": "system", "content": _STRUCTURED_SYSTEM_PROMPT}]
+    
+    history = session.messages
+    if len(history) > CONTEXT_WINDOW_SIZE:
+        history = history[-CONTEXT_WINDOW_SIZE:]
+
+   
+    for msg in history:
+        messages.append({"role": msg.role, "content": msg.content})
+
+    messages.append({"role": "user", "content": request.message})
+    add_message(session_id, "user", request.message)
+
+    result = await call_llm(messages, temperature=0.2, response_format={"type": "json_object"})
+    structured = _parse_structured(result.content or "")
+
+    add_message(session_id, "assistant", structured.answer)
+    return structured  
+
 
 
 @app.get("/api/sessions/{session_id}/history", response_model=list[Message])
@@ -248,7 +289,11 @@ async def session_history(session_id: str) -> list[Message]:
       2. Return session.messages.
     """
     # TODO (Feature 3, Step 6d): Implement session_history().
-    raise NotImplementedError("Implement session_history()")
+    #raise NotImplementedError("Implement session_history()")
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+    return session.messages
 
 
 @app.get("/api/health")
