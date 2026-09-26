@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="HealthCare Domain Assistant",
-    description="HealthCare AI Assistant — AI Engineering Bootcamp, BlockseBlock",
+    description="HealthCare AI Assistant",
     version="1.0.0",
     lifespan=lifespan,
 )
